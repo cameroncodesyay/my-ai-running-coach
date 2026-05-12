@@ -171,7 +171,7 @@ function getT() { try { return JSON.parse(localStorage.getItem(TK)); } catch(e) 
 function saveT(t) { localStorage.setItem(TK, JSON.stringify(t)); }
 
 function connectStrava() {
-  const redirectUri = location.href.split('?')[0];
+  const redirectUri = 'https://cameroncodesyay.github.io/my-ai-running-coach/cameron_running_coach.html';
   const p = new URLSearchParams({client_id:SID, redirect_uri:redirectUri, response_type:'code', approval_prompt:'auto', scope:'activity:read_all'});
   location.href = 'https://www.strava.com/oauth/authorize?' + p;
 }
