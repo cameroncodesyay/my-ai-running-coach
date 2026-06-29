@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cameron's Running Coach</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --orange: #D85A30; --teal: #1D9E75;
+  --bg: #f7f6f3; --surface: #ffffff;
+  --border: rgba(0,0,0,0.11); --text: #1a1a18; --muted: #6b6b67;
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg:#1c1c1a; --surface:#272725; --border:rgba(255,255,255,0.1); --text:#f0ede8; --muted:#8a8a86; }
+}
+html, body { height: 100%; }
+body { font-family:var(--font); background:var(--bg); display:flex; align-items:center; justify-content:center; padding:12px; min-height:100%; }
+
+/* APP SHELL */
+.app { width:100%; max-width:700px; height:calc(100vh - 24px); max-height:800px; display:flex; flex-direction:column; background:var(--surface); border-radius:18px; border:1px solid var(--border); overflow:hidden; box-shadow:0 8px 40px rgba(0,0,0,0.1); }
+
+/* SETUP */
+.setup { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 28px; gap:18px; text-align:center; }
+.setup-icon { font-size:54px; line-height:1; }
+.setup h1 { font-size:22px; font-weight:700; color:var(--text); }
+.setup p { font-size:14px; color:var(--muted); line-height:1.65; max-width:360px; }
+.setup-row { display:flex; gap:8px; width:100%; max-width:440px; }
+.setup-row input { flex:1; padding:11px 14px; border-radius:10px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-size:13px; font-family:monospace; outline:none; }
+.setup-row input:focus { border-color:var(--orange); }
+.go { padding:11px 22px; border-radius:10px; background:var(--orange); color:#fff; border:none; font-size:14px; font-weight:600; cursor:pointer; font-family:var(--font); }
+.setup-note { font-size:12px; color:var(--muted); }
+.setup-note a { color:var(--orange); text-decoration:none; }
+
+/* COACH */
+.coach { flex:1; display:none; flex-direction:column; min-height:0; }
+.coach.active { display:flex; }
+
+/* HEADER */
+.hdr { display:flex; align-items:center; gap:12px; padding:13px 16px; border-bottom:1px solid var(--border); flex-shrink:0; background:var(--surface); }
+.hav { width:40px; height:40px; border-radius:50%; background:var(--orange); display:flex; align-items:center; justify-content:center; font-size:19px; flex-shrink:0; }
+.htxt { flex:1; min-width:0; }
+.hname { font-size:14px; font-weight:600; color:var(--text); }
+.hsub { font-size:11px; color:var(--muted); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.hbtns { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+.strava-btn { padding:5px 10px; border-radius:8px; background:#FC4C02; color:#fff; font-size:11px; font-weight:600; border:none; cursor:pointer; font-family:var(--font); display:none; white-space:nowrap; }
+.clear-btn { padding:5px 10px; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--muted); font-size:11px; cursor:pointer; font-family:var(--font); white-space:nowrap; }
+
+/* STATS BAR */
+.stats { display:flex; border-bottom:1px solid var(--border); flex-shrink:0; background:var(--bg); overflow-x:auto; }
+.stat { display:flex; flex-direction:column; align-items:center; padding:7px 12px; border-right:1px solid var(--border); flex:1; min-width:fit-content; }
+.stat:last-child { border-right:none; }
+.sv { font-size:12px; font-weight:600; color:var(--text); white-space:nowrap; }
+.sl { font-size:10px; color:var(--muted); margin-top:1px; white-space:nowrap; }
+
+/* MESSAGES */
+.msgs { flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:12px; min-height:0; }
+
+.msg-row { display:flex; align-items:flex-end; gap:8px; }
+.msg-row.user { flex-direction:row-reverse; }
+
+.av { width:28px; height:28px; border-radius:50%; background:var(--orange); display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; }
+
+.bub { padding:10px 14px; font-size:13.5px; line-height:1.65; max-width:78%; border-radius:16px; word-break:break-word; }
+.bub p { margin:0 0 8px; }
+.bub p:last-child { margin-bottom:0; }
+.bub strong { font-weight:600; }
+.bub ul, .bub ol { padding-left:18px; margin:4px 0 8px; }
+.bub li { margin-bottom:3px; }
+.msg-row.coach .bub { background:var(--bg); color:var(--text); border:1px solid var(--border); border-radius:16px 16px 16px 3px; }
+.msg-row.user .bub { background:var(--orange); color:#fff; border-radius:16px 16px 3px 16px; }
+
+/* TYPING */
+.typing-bub { padding:12px 16px; background:var(--bg); border:1px solid var(--border); border-radius:16px 16px 16px 3px; display:flex; align-items:center; gap:5px; }
+.dot { width:6px; height:6px; border-radius:50%; background:var(--muted); animation:bo 1.2s infinite; }
+.dot:nth-child(2){animation-delay:.2s} .dot:nth-child(3){animation-delay:.4s}
+@keyframes bo{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}
+
+/* QUICK BTNS */
+.qbtns { padding:10px 14px; border-top:1px solid var(--border); display:flex; flex-wrap:wrap; gap:6px; flex-shrink:0; background:var(--bg); }
+.qbtn { font-size:12px; padding:6px 12px; border-radius:20px; border:1px solid var(--border); background:var(--surface); color:var(--text); cursor:pointer; font-family:var(--font); white-space:nowrap; }
+.qbtn:hover { border-color:var(--orange); color:var(--orange); }
+
+/* INPUT */
+.irow { display:flex; gap:8px; padding:10px 14px; border-top:1px solid var(--border); flex-shrink:0; align-items:flex-end; background:var(--surface); }
+#inp { flex:1; padding:9px 13px; border-radius:12px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-size:14px; font-family:var(--font); resize:none; min-height:38px; max-height:120px; line-height:1.5; outline:none; }
+#inp:focus { border-color:var(--orange); }
+#sbtn { width:38px; height:38px; border-radius:50%; background:var(--orange); border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; transition:opacity .15s; }
+#sbtn:disabled { opacity:.4; cursor:not-allowed; }
+#sbtn svg { width:16px; height:16px; fill:white; }
+
+::-webkit-scrollbar { width:4px; }
+::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- SETUP SCREEN -->
+  <div class="setup" id="setup">
+    <div class="setup-icon">🏃</div>
+    <h1>Cameron's Running Coach</h1>
+    <p>Your personal AI coach built on Mark Pinales' philosophy, your full Strava history, and your race data. Enter your Anthropic API key to get started — saved privately in your browser, never in any file.</p>
+    <div class="setup-row">
+      <input type="password" id="key-inp" placeholder="sk-ant-api03-..." onkeydown="if(event.key==='Enter')boot()"/>
+      <button class="go" onclick="boot()">Let's go</button>
+    </div>
+    <p class="setup-note">Get your key at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a> → API Keys</p>
+  </div>
+
+  <!-- COACH SCREEN -->
+  <div class="coach" id="coach">
+    <div class="hdr">
+      <div class="hav">🏃</div>
+      <div class="htxt">
+        <div class="hname">Coach — Cameron's Running AI</div>
+        <div class="hsub" id="hsub">Personalized to your full training history & race data</div>
+      </div>
+      <div class="hbtns">
+        <button class="strava-btn" id="strava-btn" onclick="connectStrava()">Connect Strava</button>
+        <button class="clear-btn" onclick="clearChat()">Clear chat</button>
+      </div>
+    </div>
+
+    <div class="stats" id="stats">
+      <div class="stat"><div class="sv">1:49:09</div><div class="sl">Half PR</div></div>
+      <div class="stat"><div class="sv">6:02</div><div class="sl">Mile PR</div></div>
+      <div class="stat"><div class="sv">21:29</div><div class="sl">5k PR</div></div>
+      <div class="stat"><div class="sv">738 mi</div><div class="sl">Career miles</div></div>
+      <div class="stat"><div class="sv">—</div><div class="sl">Last 4 wks</div></div>
+      <div class="stat"><div class="sv" id="strava-status" style="color:var(--muted)">—</div><div class="sl">Strava</div></div>
+    </div>
+
+    <div class="msgs" id="msgs"></div>
+
+    <div class="qbtns" id="qbtns">
+      <button class="qbtn" onclick="sq(this)">Build me a training plan</button>
+      <button class="qbtn" onclick="sq(this)">How do I get back to peak fitness?</button>
+      <button class="qbtn" onclick="sq(this)">I have an injury</button>
+      <button class="qbtn" onclick="sq(this)">What pace should my easy runs be?</button>
+      <button class="qbtn" onclick="sq(this)">Give me this week's workouts</button>
+    </div>
+
+    <div class="irow">
+      <textarea id="inp" placeholder="Ask your coach anything..." rows="1" oninput="ar(this)" onkeydown="hk(event)"></textarea>
+      <button id="sbtn" onclick="send()"><svg viewBox="0 0 24 24"><path d="M2 21L23 12 2 3v7l15 2-15 2z"/></svg></button>
+    </div>
+  </div>
+
+</div>
+<script>
+// ─── CONFIG ────────────────────────────────────────────────────────────
+const STRAVA_CLIENT_ID = '243818';
+const STRAVA_CLIENT_SECRET = '0b52b74a2a263f09ed0e92b477e7e2d44deabc4f';
+const STRAVA_REDIRECT = 'https://cameroncodesyay.github.io/my-ai-running-coach/cameron_running_coach.html';
+const CHAT_KEY = 'cam_v5';
+const TOKEN_KEY = 'cam_strava_v1';
+const API_KEY_STORE = 'cam_api_key';
+
+let AK = '';
+let hist = [];
+let busy = false;
+let strava = null;
+
+// ─── SYSTEM PROMPT ─────────────────────────────────────────────────────
+const SYS = `You are Cameron Howe's personal AI running coach. You coach exactly like Mark Pinales — Cameron's real coach — using his philosophy, structure, and communication style.
+
+MARK PINALES COACHING PHILOSOPHY (learned from their real conversations):
+- Build aerobic base FIRST before any speed work. Patience pays off on race day.
+- Easy runs must actually be easy. Slowing down is hard but the patience will pay off.
+- Recovery is non-negotiable. Rest weeks, rolling, stretching, sleep, fueling matter as much as the workouts.
+- Check in on the athlete frequently. Care about how they feel, not just the numbers.
+- When something hurts — STOP. There's no need to push through sharp or worsening pain.
+- Calves are Cameron's sensitive spot. They tighten under overuse. Monitor closely.
+- Hip pain = immediate rest day, no exceptions.
+- Progress from easy aerobic → moderate → hard quality work. Never skip steps.
+- 1 mile warm-up + 1 mile cool-down on ALL hard workout days (not easy runs).
+- Walking drills are a great warm-up before any run.
+- Strength 2-3x/week on easy run days, 30-45 minutes is enough.
+- Roll out DAILY. Early and often.
+- Race week = rest, easy movement, shakeout jog only. Stop strength work race week.
+- Document everything. Effort level, how it felt, what happened. Data reveals patterns.
+- Fueling: take gels every 30-40 min during long efforts. BPN gels recommended over Gu.
+- Pacing: start conservative, negative split. If you feel good last 2 reps, you can push slightly.
+- When athlete goes too fast in a workout — address it with a call/explanation, not punishment.
+- Celebrate wins genuinely. Be proud of the athlete.
+- When life gets hard (car accident, sick, bad day) — acknowledge it, don't ignore it.
+
+CAMERON'S PROFILE:
+- Name: Cameron Howe, female, ~130 lbs
+- Location: Austin, TX (hilly terrain, brutal summer heat — factor this in)
+- Student at UT Austin
+- Natural talent: strong negative splitter, mentally tough, loves data
+- Sensitive areas: calves (gastrocnemius, right side historically), hips (sharp pain = rest)
+- Shoes: Nike Zoom Fly 6, Novablast as daily trainer
+- Strava connected
+
+RACE HISTORY & PRs:
+- Austin 5 Mile Turkey Trot: 39:58 (11/28/24, debut, very hilly — DEBUT)
+- Jingle Bell 5k: 21:29 (12/8/24, PR by 2:10, semi-flat)
+- Mile time trial: 6:02 (12/23/24, PR by 39s, track, effort 10/10)
+- Austin International Half Marathon: 1:49:09 (1/19/25, DEBUT — goal 1:55, B goal 1:45)
+  Splits: 8:30, 8:30, 8:30, 8:25, 8:28, 8:26, 8:20, 8:25, 8:24, 8:17, 8:13, 8:02, 7:15
+  Negative split, crushed the goal, Mark said "You crushed it!! So proud of you!!!"
+- Turkey Trot 2025: 5.8 mi in 58:00 (9:59/mi) — slower comeback race after break
+- Mile attempt 1/3/26: 6:14 — did not PR
+- Half marathon with friend 2/15/26: 13.14 mi in 2:11:44 (10:01/mi) — training run, not race
+
+FULL STRAVA TRAINING HISTORY (190 runs, 738 miles, Sep 2024 – May 2026):
+Monthly miles: Sep24:14 | Oct24:47 | Nov24:63 | Dec24:71 | Jan25:75(PEAK) | Feb25:62 | Mar25:37 | Apr25:42 | May25:53 | Jun25:32 | Jul25:32 | Aug25:3(BREAK) | Sep25:1 | Oct25:0 | Nov25:26(comeback) | Dec25:50 | Jan26:39 | Feb26:41 | Mar26:26 | Apr26:9 | May26:~16(current)
+
+PEAK TRAINING STRUCTURE (Mark Pinales' system):
+- Monday: Short hard workout (200m/400m repeats, hills)
+- Tuesday: Easy run + Strength (30-45 min)
+- Wednesday: Long hard workout (800m/mile repeats, tempo, fartlek)
+- Thursday: Easy run + Strength (30-45 min)
+- Friday: REST
+- Saturday: Long run (+ optional strength)
+- Sunday: REST (+ optional strength)
+- Rest week every 3rd week: drop mileage 30-40%, easier paces, reduce strength 30-50%
+
+PAST WORKOUTS (what Mark actually prescribed):
+Short hard: 8x400m @1:55-1:50 w/90s walk; 8x200m @50-45s w/200m jog; 12x400m descending; hills 3mi of 30-45s uphills w/walk rest; 8x400m @1:50-1:45
+Long hard: 8x800m @4:00-3:50 w/90s-2min walk; 4x1mi @8:40,8:30,8:20,8:10; 5mi fartlek 2min ON @7:50-7:30 + 2min jog; long run workout 3mi easy+6x1mi@8:20-8:40+3mi easy
+Easy runs: start 10:30, work to 9:30 if it feels easy
+Long runs: 5-14 miles aerobic, occasional progression
+
+CURRENT FITNESS (May/June 2026 — this is what matters most):
+- Just returning from inconsistent training. Last solid block was Jan 2025.
+- Aug-Oct 2025: complete break (0-3 miles/month)
+- Comeback since Nov 2025 has been gradual but inconsistent
+- Recent easy paces: 9:50-11:30/mi (heat + rebuilding aerobic base)
+- HR still high on easy runs (170s-180s) — aerobic base not rebuilt yet
+- Weekly mileage: 8-16 miles currently
+- Longest recent run: ~5 miles
+- Last structured speed work: Dec 2024/Jan 2025 — 12-18 MONTHS AGO
+- Currently running roughly 20% of peak volume
+
+CURRENT PACE BENCHMARKS (use these — not peak paces):
+- Recovery/easy: 10:45-11:15/mi
+- Aerobic/comfortable: 10:00-10:30/mi
+- Tempo effort (current): 9:15-9:45/mi
+- Speed work (current): 200m @75-80s, 400m @2:25-2:35 (START HERE — much slower than peak)
+- Long run: 10:30-11:00/mi
+
+PEAK PACES (goals, not current):
+- Easy: 9:30/mi | Tempo: 8:40/mi | 400m: 1:45-1:55 | HM race: 8:15/mi
+
+INJURY PROTOCOL (Mark's approach):
+- Sharp pain = rest immediately, no negotiation
+- Calf tightness = reduce volume, more rolling, monitor closely
+- Hip pain = day off, check in next day
+- Soreness after hard workout = normal, expected, good sign
+- Limping = stop completely
+- Pain only during running, none during day = cautious monitoring
+- Always: roll out after EVERY run, stretch daily
+
+WORKOUT MATH RULES — CRITICAL, NEVER SKIP:
+Before prescribing ANY workout, calculate total mileage out loud:
+- Warm-up: 1.0 mi (hard workout days only)
+- Cool-down: 1.0 mi (hard workout days only)
+- 200m interval = 0.125 mi
+- 400m interval = 0.25 mi
+- 800m interval = 0.5 mi
+- 1 mile interval = 1.0 mi
+- Rest jog between intervals = same distance as interval unless specified
+Example: 8x400m workout = 1mi WU + 8x(0.25mi interval + 0.25mi jog rest) + 1mi CD = 1 + 4 + 1 = 6 miles total
+ALWAYS state total miles at the top of every workout. ALWAYS give exact pace in min/mile for every piece.
+
+TRAINING LOAD AWARENESS:
+- Cameron has NOT done speed work in 12-18 months
+- First speed session back: max 4-6 reps, slower than peak, MORE rest than peak
+- Do NOT jump to full workouts. Build back over 4-6 weeks.
+- Week 1-2 back: strides, short hill sprints, very short intervals
+- Week 3-4: 4-6x shorter intervals at conservative pace
+- Week 5-6: start adding reps, slightly faster
+- Never increase weekly mileage more than 10% per week
+- Never prescribe more than current weekly volume allows
+
+COMMUNICATION STYLE:
+- Sound like a real coach who genuinely cares about Cameron
+- Reference specific data from her Strava when relevant
+- Celebrate progress, even small wins
+- Be honest when something needs to change
+- Check in on how the body feels, not just the workout
+- Explain the WHY behind every prescription
+- If live Strava data is provided, always reference the most recent runs first`;
+
+// ─── MARKDOWN RENDERER ─────────────────────────────────────────────────
+function renderMarkdown(text) {
+  let html = text
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/^#{1,3} (.+)$/gm, '<strong>$1</strong>')
+    .replace(/^[-•] (.+)$/gm, '<li>$1</li>')
+    .replace(/^(\d+)\. (.+)$/gm, '<li>$2</li>')
+    .replace(/(<li>.*<\/li>\n?)+/g, m => '<ul>' + m + '</ul>')
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/\n/g, '<br>');
+  return '<p>' + html + '</p>';
+}
+
+// ─── STRAVA ────────────────────────────────────────────────────────────
+function getTokens() { try { return JSON.parse(localStorage.getItem(TOKEN_KEY)); } catch(e) { return null; } }
+function saveTokens(t) { localStorage.setItem(TOKEN_KEY, JSON.stringify(t)); }
+
+function connectStrava() {
+  const p = new URLSearchParams({
+    client_id: STRAVA_CLIENT_ID,
+    redirect_uri: STRAVA_REDIRECT,
+    response_type: 'code',
+    approval_prompt: 'auto',
+    scope: 'activity:read_all'
+  });
+  location.href = 'https://www.strava.com/oauth/authorize?' + p;
+}
+
+async function getAccessToken() {
+  let t = getTokens();
+  if (!t) return null;
+  if (t.expires_at < Date.now()/1000 + 300) {
+    try {
+      const r = await fetch('https://www.strava.com/oauth/token', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({client_id:STRAVA_CLIENT_ID, client_secret:STRAVA_CLIENT_SECRET, refresh_token:t.refresh_token, grant_type:'refresh_token'})
+      });
+      const d = await r.json();
+      if (d.access_token) { t = {...t, ...d}; saveTokens(t); } else return null;
+    } catch(e) { return null; }
+  }
+  return t.access_token;
+}
+
+async function loadStrava() {
+  const token = await getAccessToken();
+  if (!token) {
+    document.getElementById('strava-btn').style.display = 'inline-block';
+    document.getElementById('strava-status').textContent = '—';
+    return;
+  }
+  try {
+    const r = await fetch('https://www.strava.com/api/v3/athlete/activities?per_page=100', {
+      headers: {'Authorization': 'Bearer ' + token}
+    });
+    const acts = await r.json();
+    if (!Array.isArray(acts)) throw new Error('Bad response');
+
+    const runs = acts
+      .filter(a => a.type === 'Run' || a.sport_type === 'Run')
+      .map(a => {
+        const mi = (a.distance / 1000) * 0.621371;
+        const pace = mi > 0 ? (a.moving_time / 60) / mi : 0;
+        return {
+          date: a.start_date_local.slice(0, 10),
+          name: a.name,
+          mi: mi.toFixed(2),
+          pace: `${Math.floor(pace)}:${Math.round((pace % 1) * 60).toString().padStart(2, '0')}`,
+          hr: a.average_heartrate ? Math.round(a.average_heartrate) : null,
+          elev: a.total_elevation_gain ? Math.round(a.total_elevation_gain * 3.281) : null
+        };
+      })
+      .sort((a, b) => b.date.localeCompare(a.date));
+
+    const totalMi = runs.reduce((s, r) => s + parseFloat(r.mi), 0).toFixed(1);
+    const cut = new Date(Date.now() - 28 * 86400000).toISOString().slice(0, 10);
+    const wkMi = runs.filter(r => r.date >= cut).reduce((s, r) => s + parseFloat(r.mi), 0).toFixed(1);
+
+    strava = { runs, totalMi, wkMi, n: runs.length };
+
+    // Update stats bar
+    document.getElementById('stats').innerHTML = `
+      <div class="stat"><div class="sv">1:49:09</div><div class="sl">Half PR</div></div>
+      <div class="stat"><div class="sv">6:02</div><div class="sl">Mile PR</div></div>
+      <div class="stat"><div class="sv">21:29</div><div class="sl">5k PR</div></div>
+      <div class="stat"><div class="sv">${totalMi} mi</div><div class="sl">Career miles</div></div>
+      <div class="stat"><div class="sv">${wkMi} mi</div><div class="sl">Last 4 wks</div></div>
+      <div class="stat"><div class="sv" style="color:var(--teal)">✓ Live</div><div class="sl">Strava</div></div>`;
+    document.getElementById('hsub').textContent = `Live Strava · ${runs.length} runs · ${wkMi} mi last 4 weeks`;
+  } catch(e) {
+    console.warn('Strava error:', e);
+    document.getElementById('strava-btn').style.display = 'inline-block';
+  }
+}
+
+// ─── CHAT PERSISTENCE ──────────────────────────────────────────────────
+function saveChat() {
+  try { localStorage.setItem(CHAT_KEY, JSON.stringify(hist.slice(-80))); } catch(e) {}
+}
+function loadSavedChat() {
+  try { const s = localStorage.getItem(CHAT_KEY); return s ? JSON.parse(s) : []; } catch(e) { return []; }
+}
+function clearChat() {
+  hist = [];
+  localStorage.removeItem(CHAT_KEY);
+  document.getElementById('msgs').innerHTML = '';
+  document.getElementById('qbtns').style.display = 'flex';
+  addMsg('coach', "Chat cleared! What are we working on?");
+}
+
+// ─── MESSAGES ──────────────────────────────────────────────────────────
+function addMsg(role, text) {
+  const c = document.getElementById('msgs');
+  const row = document.createElement('div');
+  row.className = 'msg-row ' + role;
+
+  if (role === 'coach') {
+    const av = document.createElement('div');
+    av.className = 'av'; av.textContent = '🏃';
+    const bub = document.createElement('div');
+    bub.className = 'bub';
+    bub.innerHTML = renderMarkdown(text);
+    row.appendChild(av);
+    row.appendChild(bub);
+  } else {
+    const bub = document.createElement('div');
+    bub.className = 'bub';
+    bub.textContent = text;
+    row.appendChild(bub);
+  }
+
+  c.appendChild(row);
+  c.scrollTop = c.scrollHeight;
+}
+
+function showTyping() {
+  const c = document.getElementById('msgs');
+  const row = document.createElement('div');
+  row.className = 'msg-row coach'; row.id = 'typing';
+  const av = document.createElement('div');
+  av.className = 'av'; av.textContent = '🏃';
+  const bub = document.createElement('div');
+  bub.className = 'typing-bub';
+  bub.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
+  row.appendChild(av); row.appendChild(bub);
+  c.appendChild(row);
+  c.scrollTop = c.scrollHeight;
+}
+function hideTyping() { const e = document.getElementById('typing'); if (e) e.remove(); }
+
+// ─── API CALL ──────────────────────────────────────────────────────────
+async function callClaude(msg) {
+  let sys = SYS;
+
+  if (strava) {
+    sys += '\n\nLIVE STRAVA DATA (just pulled):\n';
+    sys += `Total: ${strava.n} runs, ${strava.totalMi} miles career | Last 4 weeks: ${strava.wkMi} miles\n`;
+    sys += '\nMOST RECENT 20 RUNS (use these to assess current fitness):\n';
+    strava.runs.slice(0, 20).forEach(r => {
+      sys += `${r.date} | ${r.name} | ${r.mi} mi | ${r.pace}/mi`;
+      if (r.hr) sys += ` | HR: ${r.hr}`;
+      if (r.elev) sys += ` | elev: ${r.elev}ft`;
+      sys += '\n';
+    });
+  }
+
+  hist.push({ role: 'user', content: msg });
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-api-key': AK,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-5',
+      max_tokens: 1500,
+      system: sys,
+      messages: hist
+    })
+  });
+
+  if (!res.ok) {
+    hist.pop();
+    const e = await res.json().catch(() => ({}));
+    throw new Error(e?.error?.message || 'HTTP ' + res.status);
+  }
+
+  const data = await res.json();
+  const reply = (data.content || []).map(b => b.text || '').join('');
+  hist.push({ role: 'assistant', content: reply });
+  saveChat();
+  return reply;
+}
+
+// ─── SEND ──────────────────────────────────────────────────────────────
+async function send() {
+  if (busy) return;
+  const inp = document.getElementById('inp');
+  const txt = inp.value.trim();
+  if (!txt) return;
+  inp.value = ''; inp.style.height = 'auto';
+  document.getElementById('qbtns').style.display = 'none';
+  document.getElementById('sbtn').disabled = true;
+  addMsg('user', txt);
+  busy = true; showTyping();
+  try {
+    const reply = await callClaude(txt);
+    hideTyping(); addMsg('coach', reply);
+  } catch(e) {
+    hideTyping();
+    addMsg('coach', 'Something went wrong: ' + e.message + '\n\nCheck your API key is enabled at console.anthropic.com');
+  }
+  busy = false;
+  document.getElementById('sbtn').disabled = false;
+}
+
+function sq(btn) { document.getElementById('inp').value = btn.textContent; send(); }
+function hk(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }
+function ar(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; }
+
+// ─── BOOT ──────────────────────────────────────────────────────────────
+function showCoach() {
+  document.getElementById('setup').style.display = 'none';
+  document.getElementById('coach').classList.add('active');
+
+  hist = loadSavedChat();
+
+  if (hist.length === 0) {
+    const opening = "Hey Cameron! 👋 Your coach is live.\n\nI've got your full history loaded — **1:49:09 half marathon debut**, **21:29 5k PR**, **6:02 mile**, 190 runs and 738 miles of training data, and Mark's entire coaching philosophy baked in.\n\nI know where you're at right now — rebuilding, May 2026, running 8-16 miles/week at around 10:00-10:30/mi pace. The summer 2025 break happened, that's okay. We've got the blueprint to get you back.\n\nHit **Connect Strava** in the top right for live run updates. Or just ask me anything.\n\nWhat are we working on?";
+    addMsg('coach', opening);
+    hist.push({ role: 'assistant', content: opening });
+    saveChat();
+  } else {
+    const c = document.getElementById('msgs');
+    c.innerHTML = '';
+    hist.forEach(m => addMsg(m.role === 'user' ? 'user' : 'coach', m.content));
+    document.getElementById('qbtns').style.display = 'none';
+    const note = document.createElement('div');
+    note.style.cssText = 'text-align:center;font-size:11px;color:var(--muted);padding:6px 0 2px;flex-shrink:0;';
+    note.textContent = '— conversation resumed —';
+    c.appendChild(note);
+    c.scrollTop = c.scrollHeight;
+  }
+
+  // Load Strava in background
+  loadStrava();
+}
+
+function boot() {
+  const val = document.getElementById('key-inp').value.trim();
+  if (!val.startsWith('sk-')) { alert('Please enter a valid Anthropic API key (starts with sk-)'); return; }
+  AK = val;
+  localStorage.setItem(API_KEY_STORE, AK);
+  showCoach();
+}
+
+async function init() {
+  // Handle Strava OAuth redirect
+  const params = new URLSearchParams(location.search);
+  const code = params.get('code');
+  if (code) {
+    window.history.replaceState({}, '', location.pathname);
+    try {
+      const r = await fetch('https://www.strava.com/oauth/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ client_id: STRAVA_CLIENT_ID, client_secret: STRAVA_CLIENT_SECRET, code, grant_type: 'authorization_code' })
+      });
+      const d = await r.json();
+      if (d.access_token) saveTokens(d);
+    } catch(e) { console.warn('Token exchange failed:', e); }
+  }
+
+  // Check for saved API key
+  const saved = localStorage.getItem(API_KEY_STORE);
+  if (saved && saved.startsWith('sk-')) {
+    AK = saved;
+    showCoach();
+  }
+  // Otherwise setup screen shows by default
+}
+
+init();
+</script>
+</body>
+</html>
