@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cameron's Running Coach</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --orange: #D85A30; --teal: #1D9E75;
+  --bg: #f5f4f0; --surface: #ffffff;
+  --border: #e0ddd6; --text: #1a1a18; --muted: #888880;
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg:#1c1b19; --surface:#272522; --border:#3a3830; --text:#f0ede6; --muted:#888880; }
+}
+html, body { height: 100%; font-family: var(--font); background: var(--bg); }
+body { display: flex; align-items: center; justify-content: center; padding: 12px; min-height: 100%; }
+
+.app {
+  width: 100%; max-width: 680px;
+  height: calc(100vh - 24px); max-height: 820px;
+  background: var(--surface);
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 40px rgba(0,0,0,0.12);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+
+/* SETUP */
+#setup {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 40px 32px; gap: 20px; text-align: center;
+}
+#setup .logo { font-size: 56px; }
+#setup h1 { font-size: 22px; font-weight: 700; color: var(--text); }
+#setup p { font-size: 14px; color: var(--muted); line-height: 1.7; max-width: 380px; }
+.key-row { display: flex; gap: 8px; width: 100%; max-width: 460px; }
+.key-row input { flex: 1; padding: 11px 14px; border-radius: 10px; border: 1.5px solid var(--border); background: var(--bg); color: var(--text); font-size: 13px; font-family: monospace; outline: none; }
+.key-row input:focus { border-color: var(--orange); }
+.go-btn { padding: 11px 22px; border-radius: 10px; background: var(--orange); color: #fff; border: none; font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.note { font-size: 12px; color: var(--muted); }
+.note a { color: var(--orange); text-decoration: none; }
+
+/* COACH */
+#coach { display: none; flex: 1; flex-direction: column; min-height: 0; }
+#coach.on { display: flex; }
+
+/* HEADER */
+.hdr { display: flex; align-items: center; gap: 12px; padding: 13px 18px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.hav { width: 42px; height: 42px; border-radius: 50%; background: var(--orange); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+.htxt { flex: 1; min-width: 0; }
+.hname { font-size: 14px; font-weight: 700; color: var(--text); }
+.hsub { font-size: 11px; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hbtns { display: flex; gap: 6px; flex-shrink: 0; }
+.btn-strava { padding: 5px 11px; border-radius: 8px; background: #FC4C02; color: #fff; font-size: 11px; font-weight: 600; border: none; cursor: pointer; display: none; white-space: nowrap; }
+.btn-ghost { padding: 5px 11px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-size: 11px; cursor: pointer; white-space: nowrap; }
+
+/* STATS */
+.stats { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; background: var(--bg); overflow-x: auto; }
+.stat { flex: 1; min-width: fit-content; display: flex; flex-direction: column; align-items: center; padding: 7px 12px; border-right: 1px solid var(--border); }
+.stat:last-child { border-right: none; }
+.sv { font-size: 12px; font-weight: 700; color: var(--text); white-space: nowrap; }
+.sl { font-size: 10px; color: var(--muted); margin-top: 1px; white-space: nowrap; }
+
+/* MESSAGES */
+.msgs { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+.row { display: flex; width: 100%; }
+.row.coach { justify-content: flex-start; align-items: flex-end; gap: 8px; }
+.row.user { justify-content: flex-end; }
+.av { width: 28px; height: 28px; border-radius: 50%; background: var(--orange); display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
+.bubble { max-width: 75%; padding: 10px 14px; font-size: 13.5px; line-height: 1.65; word-break: break-word; }
+.row.coach .bubble { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 16px 16px 16px 3px; }
+.row.user .bubble { background: var(--orange); color: #fff; border-radius: 16px 16px 3px 16px; }
+.bubble p { margin: 0 0 8px; }
+.bubble p:last-child { margin: 0; }
+.bubble strong { font-weight: 700; }
+.bubble em { font-style: italic; }
+.bubble ul, .bubble ol { padding-left: 18px; margin: 4px 0 8px; }
+.bubble li { margin-bottom: 3px; }
+
+/* TYPING */
+.typing-bub { display: flex; align-items: center; gap: 5px; padding: 12px 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 16px 16px 16px 3px; }
+.d { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); animation: pulse 1.2s infinite; }
+.d:nth-child(2){animation-delay:.2s} .d:nth-child(3){animation-delay:.4s}
+@keyframes pulse{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}
+
+/* QUICK BTNS */
+.qbtns { display: flex; flex-wrap: wrap; gap: 7px; padding: 10px 16px; border-top: 1px solid var(--border); flex-shrink: 0; background: var(--bg); }
+.qbtn { font-size: 12px; padding: 6px 13px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; white-space: nowrap; }
+.qbtn:hover { border-color: var(--orange); color: var(--orange); }
+
+/* INPUT */
+.irow { display: flex; align-items: flex-end; gap: 8px; padding: 11px 15px; border-top: 1px solid var(--border); flex-shrink: 0; }
+#inp { flex: 1; padding: 9px 13px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--bg); color: var(--text); font-size: 14px; font-family: var(--font); resize: none; min-height: 38px; max-height: 120px; line-height: 1.5; outline: none; }
+#inp:focus { border-color: var(--orange); }
+#sbtn { width: 38px; height: 38px; border-radius: 50%; background: var(--orange); border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+#sbtn:disabled { opacity: .4; cursor: not-allowed; }
+#sbtn svg { width: 16px; height: 16px; fill: #fff; }
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+<div id="setup">
+  <div class="logo">🏃</div>
+  <h1>Cameron's Running Coach</h1>
+  <p>Your personal AI coach built on Mark Pinales' philosophy, your full Strava history, and your race data. Enter your Anthropic API key to get started.</p>
+  <div class="key-row">
+    <input type="password" id="key-inp" placeholder="sk-ant-api03-..." onkeydown="if(event.key==='Enter')startCoach()">
+    <button class="go-btn" onclick="startCoach()">Let's go</button>
+  </div>
+  <p class="note">Get your key at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a> → API Keys</p>
+</div>
+
+<div id="coach">
+  <div class="hdr">
+    <div class="hav">🏃</div>
+    <div class="htxt">
+      <div class="hname">Coach — Cameron's Running AI</div>
+      <div class="hsub" id="hsub">Personalized to your full training history & race data</div>
+    </div>
+    <div class="hbtns">
+      <button class="btn-strava" id="strava-btn" onclick="connectStrava()">Connect Strava</button>
+      <button class="btn-ghost" onclick="clearChat()">Clear chat</button>
+    </div>
+  </div>
+
+  <div class="stats" id="stats">
+    <div class="stat"><div class="sv">1:49:09</div><div class="sl">Half PR</div></div>
+    <div class="stat"><div class="sv">6:02</div><div class="sl">Mile PR</div></div>
+    <div class="stat"><div class="sv">21:29</div><div class="sl">5k PR</div></div>
+    <div class="stat"><div class="sv">738 mi</div><div class="sl">Career</div></div>
+    <div class="stat"><div class="sv" id="wk-stat">—</div><div class="sl">Last 4 wks</div></div>
+    <div class="stat"><div class="sv" id="strava-stat" style="color:var(--muted)">—</div><div class="sl">Strava</div></div>
+  </div>
+
+  <div class="msgs" id="msgs"></div>
+
+  <div class="qbtns" id="qbtns">
+    <button class="qbtn" onclick="quickSend(this)">What's my plan this week?</button>
+    <button class="qbtn" onclick="quickSend(this)">Build me a training plan</button>
+    <button class="qbtn" onclick="quickSend(this)">I have an injury</button>
+    <button class="qbtn" onclick="quickSend(this)">What should my easy pace be?</button>
+    <button class="qbtn" onclick="quickSend(this)">Give me this week's strength workout</button>
+  </div>
+
+  <div class="irow">
+    <textarea id="inp" rows="1" placeholder="Ask your coach anything..." oninput="autosize(this)" onkeydown="keydown(event)"></textarea>
+    <button id="sbtn" onclick="sendMsg()"><svg viewBox="0 0 24 24"><path d="M2 21L23 12 2 3v7l15 2-15 2z"/></svg></button>
+  </div>
+</div>
+
+</div>
+<script>
+const STRAVA_CLIENT_ID = '243818';
+const STRAVA_CLIENT_SECRET = '0b52b74a2a263f09ed0e92b477e7e2d44deabc4f';
+const STRAVA_REDIRECT = 'https://cameroncodesyay.github.io/my-ai-running-coach/cameron_running_coach.html';
+const CHAT_KEY = 'cam_v10';
+const TOKEN_KEY = 'cam_strava_v1';
+const API_KEY_STORE = 'cam_api_key';
+
+let API_KEY = '';
+let messages = [];
+let busy = false;
+let stravaCtx = '';
+
+// ── DATE HELPERS ─────────────────────────────────────────────────
+function getTodayFull() {
+  const now = new Date();
+  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  return `${days[now.getDay()]}, ${months[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
+}
+
+function getDayOfWeek(dateStr) {
+  // Returns the day of week for any YYYY-MM-DD string
+  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const d = new Date(dateStr + 'T12:00:00');
+  return days[d.getDay()];
+}
+
+// ── SYSTEM PROMPT ─────────────────────────────────────────────────
+function buildSystem() {
+  const today = getTodayFull();
+
+  return `You are Cameron Howe's personal AI running coach. You coach exactly like Mark Pinales — Cameron's real coach. You are direct, decisive, and specific. You never waffle or offer multiple options when one right answer exists. You make the call and you stand by it.
+
+TODAY'S DATE: ${today}
+You always know the exact date and day of the week. When Cameron mentions a date, you know instantly what day of the week it falls on. You use this to build precise training calendars and never get confused about what day it is.
+
+MARK PINALES COACHING PHILOSOPHY:
+- Build aerobic base first before speed work. Slowing down is hard but patience pays off on race day.
+- Easy runs must actually be easy — most runners go too fast on easy days. This is non-negotiable.
+- Recovery is as important as the workout: rest weeks, rolling, stretching, sleep, fueling.
+- Never train through sharp pain. Rest first, assess second.
+- Calves are Cameron's most sensitive area (right gastrocnemius). Monitor constantly.
+- Hip pain = immediate rest day, no exceptions.
+- Always check in on how the body feels, not just numbers.
+- 1 mile warm-up + 1 mile cool-down on ALL hard workout days. Never skip these.
+- Strength 2-3x per week on easy run days, 30-45 min.
+- Roll out daily — early and often. This keeps Cameron healthy.
+- Race week = rest only. Stop strength work. Shakeout jog only.
+- Fueling: gels or nutrition every 30-40 min on long efforts.
+- Pacing philosophy: always start conservative, finish strong. Negative split is the goal.
+- Rest week every 3rd week: drop mileage 30-40%, easier paces, reduce strength.
+- Celebrate wins genuinely. Be proud of the athlete. Care about them as a person.
+- When athlete pushes back on the plan, listen — but if you're right, hold firm and explain why clearly. Don't cave just to please them.
+
+DECISIVENESS RULES — CRITICAL:
+- Never give ranges on decisions (not "3-4 miles" — say "3 miles" or "4 miles")
+- Never offer multiple options and ask Cameron to pick — YOU make the call
+- When asked if Cameron can do something (swap a rest day, add a run, skip a workout) — say YES or NO clearly, then explain
+- If Cameron pushes back on your plan, acknowledge it, explain the reasoning clearly, and either hold firm or adjust — but make ONE decision, not a menu of options
+- You are the coach. Act like it.
+
+CAMERON'S PROFILE:
+- Name: Cameron Howe, female, ~130 lbs
+- Location: Austin, TX (hilly terrain, brutal summer heat — always factor this in)
+- Student at UT Austin, Coach at Cameron Runs
+- Natural talent: strong negative splitter, mentally tough, loves data, pushes hard
+- Known weak spots: right calf (gastrocnemius) — has flared before, monitor always; hips under high volume
+- Shoes: Nike Zoom Fly 6 (race), Novablast (daily trainer)
+- Uses COROS PACE 3 watch
+
+RACE PRs:
+- Austin Turkey Trot 5 mile: 39:58 (11/28/24, debut, very hilly)
+- Jingle Bell 5k: 21:29 (12/8/24, PR by 2:10)
+- Mile time trial: 6:02 (12/23/24, track, effort 10/10)
+- Austin International Half Marathon: 1:49:09 (1/19/25, debut — A goal was 1:55, crushed it)
+  Splits: 8:30, 8:30, 8:30, 8:25, 8:28, 8:26, 8:20, 8:25, 8:24, 8:17, 8:13, 8:02, 7:15
+
+FULL TRAINING HISTORY (Strava, Sep 2024 – Jul 2026):
+Monthly miles: Sep24:14 | Oct24:47 | Nov24:63 | Dec24:71 | Jan25:75(PEAK) | Feb25:62 | Mar25:37 | Apr25:42 | May25:53 | Jun25:32 | Jul25:32 | Aug25:3(BREAK) | Sep25:1 | Oct25:0 | Nov25:26(comeback) | Dec25:50 | Jan26:39 | Feb26:41 | Mar26:26 | Apr26:9 | May26:16 | Jun26:~20 | Jul26: ongoing
+
+KEY RECENT RUNS (most current fitness picture):
+- Jul 3, 2026 (Thursday): 3.08 mi @ 10:14/mi — "nice and slow" — felt good, set PRs on two segments
+- Jul 2, 2026 (Wednesday): 3.01 mi @ 9:43/mi — HR got high near end, went out slightly too fast
+- Jun 30, 2026 (Monday): 3.39 mi @ 9:47/mi — solid easy run
+- Jun 29, 2026 (Sunday): 4.03 mi @ 9:55/mi — HR 171, first run back after surf camp
+- Context: Cameron just returned from a month of surf camp (daily surfing, minimal running). Surfing maintained aerobic base but connective tissue needs time to adapt back to running impact.
+
+CURRENT FITNESS (July 2026 — this is what matters):
+- Just back from surf camp. Body tight from surfing, adapting back to running.
+- Recent soreness: IT band, hip flexors, calves — all dull ache/DOMS, improving
+- Running 3-4 miles at a time, 4-5x/week
+- Current easy pace: 9:45-10:15/mi (this is real, not slow — Austin heat + rebuilding)
+- Current comfortable aerobic pace: 9:30-9:50/mi
+- Last structured speed work: December 2024/January 2025 — over 18 months ago
+- Current weekly mileage: ~15 miles/week building
+- Goal: Feel comfortable and conversational at 8:20-8:45/mi pace. No specific race, building general fitness.
+
+CURRENT PACE TARGETS (based on fitness RIGHT NOW — not peak, not two weeks ago, NOW):
+- Easy/recovery: 10:00-10:30/mi (Austin heat adds ~30-45s per mile)
+- Comfortable aerobic: 9:30-9:50/mi
+- Tempo effort (current): 8:45-9:15/mi
+- Speed intervals NOW: 200m @65-70s, 400m @2:05-2:15, 800m @4:20-4:35
+  (These are conservative for first sessions back — NOT peak paces, but also not 2:30-2:35 which is way too slow for Cameron's fitness)
+- Long run: 10:00-10:30/mi
+
+PEAK PACES (goals, not current):
+- Easy: 9:30/mi | Tempo: 8:40/mi | 400m: 1:45-1:55 | HM race: 8:15/mi
+
+WEEKLY STRUCTURE (Mark's system):
+- Monday: Short hard workout (200s, 400s, hills, strides)
+- Tuesday: Easy run + strength (30-45 min)
+- Wednesday: Long hard workout (800s, mile repeats, tempo, fartlek)
+- Thursday: Easy run + strength (30-45 min)
+- Friday: REST
+- Saturday: Long run
+- Sunday: REST
+- Rest week every 3rd week: drop 30-40% volume, easier paces, reduce strength
+
+WORKOUT MATH — DO THIS EVERY TIME WITHOUT EXCEPTION:
+Calculate total mileage BEFORE writing the workout. State it at the top.
+- Warm-up: 1.0 mi (hard workout days only)
+- Cool-down: 1.0 mi (hard workout days only)
+- 200m = 0.125 mi | 400m = 0.25 mi | 800m = 0.5 mi | 1 mile = 1.0 mi
+- Rest jog between intervals = same distance as interval unless specified
+Example: 1mi WU + 6x400m (6×0.25=1.5mi intervals + 6×0.25=1.5mi jog rest) + 1mi CD = 5.0 miles total
+Always state: "Total: X miles" at the top of every workout.
+
+RETURNING TO SPEED AFTER 18+ MONTH BREAK:
+Week 1-2: Strides only (4-6x20s smooth accelerations after easy runs). Body adapts to turnover.
+Week 3: First real intervals — 4-6x400m @ 2:05-2:15. Conservative reps, more rest than peak.
+Week 4: 6-8x400m or introduce 800s at 4:20-4:35. Add reps, maintain pace.
+Week 5-6: Start mixing workouts. Short hard Monday, longer hard Wednesday.
+Never jump to peak volumes. Earn each progression.
+
+MILEAGE RULES:
+- Never increase weekly mileage more than 10% per week
+- Never prescribe more volume than current fitness supports
+- After soreness or injury: reset to conservative volume, rebuild
+
+INJURY PROTOCOL:
+- Sharp pain = stop immediately, rest that day
+- Dull soreness/DOMS = manageable, monitor closely
+- IT band tightness = extra rolling, reduce volume, check hip strength
+- Calf tightness (right especially) = immediate caution, reduce volume, no speed until resolved
+- Hip pain = rest day, no exceptions
+- Limping = stop completely
+
+STRAVA SYNC NOTE:
+Strava API can lag 1-6 hours after a run uploads. If Cameron says she ran but you don't see it in the live data, acknowledge the lag clearly ("Strava hasn't synced it yet — tell me the details and I'll work with what you give me") and move on. Do NOT keep asking her to check Strava. Take her word for it and log it manually in the conversation.
+
+COMMUNICATION STYLE:
+- Direct and decisive. Make the call, explain it once, move on.
+- Reference Cameron's actual recent data every time you give advice.
+- Check in on the body (calves, IT band, hips) regularly — not every message, but consistently.
+- Celebrate wins genuinely. A PR on a segment, a good easy run, a smart recovery day — these all matter.
+- Explain the WHY behind every prescription, but keep it tight. No essays.
+- When Cameron pushes back: listen, acknowledge, then either adjust or hold firm. Never just cave.`;
+}
+
+// ── MARKDOWN ─────────────────────────────────────────────────────
+function md(text) {
+  return '<p>' + text
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,'<em>$1</em>')
+    .replace(/^#{1,3} (.+)$/gm,'<strong>$1</strong>')
+    .replace(/^[-•] (.+)$/gm,'<li>$1</li>')
+    .replace(/^(\d+)\. (.+)$/gm,'<li>$2</li>')
+    .replace(/(<li>[\s\S]*?<\/li>)/g, m => '<ul>'+m+'</ul>')
+    .replace(/\n\n+/g,'</p><p>')
+    .replace(/\n/g,'<br>')
+  + '</p>';
+}
+
+// ── STRAVA ───────────────────────────────────────────────────────
+function connectStrava() {
+  location.href = 'https://www.strava.com/oauth/authorize?' + new URLSearchParams({
+    client_id: STRAVA_CLIENT_ID,
+    redirect_uri: STRAVA_REDIRECT,
+    response_type: 'code',
+    approval_prompt: 'auto',
+    scope: 'activity:read_all'
+  });
+}
+
+function getTokens() { try { return JSON.parse(localStorage.getItem(TOKEN_KEY)); } catch(e) { return null; } }
+function saveTokens(t) { localStorage.setItem(TOKEN_KEY, JSON.stringify(t)); }
+
+async function getAccessToken() {
+  let t = getTokens();
+  if (!t) return null;
+  if (t.expires_at < Date.now()/1000 + 300) {
+    try {
+      const r = await fetch('https://www.strava.com/oauth/token', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({client_id:STRAVA_CLIENT_ID, client_secret:STRAVA_CLIENT_SECRET, refresh_token:t.refresh_token, grant_type:'refresh_token'})
+      });
+      const d = await r.json();
+      if (!d.access_token) return null;
+      t = {...t,...d}; saveTokens(t);
+    } catch(e) { return null; }
+  }
+  return t.access_token;
+}
+
+async function loadStrava() {
+  const token = await getAccessToken().catch(() => null);
+  if (!token) { document.getElementById('strava-btn').style.display = 'inline-block'; return; }
+  try {
+    const r = await fetch('https://www.strava.com/api/v3/athlete/activities?per_page=100', {
+      headers: {'Authorization': 'Bearer ' + token}
+    });
+    const acts = await r.json();
+    if (!Array.isArray(acts)) throw new Error('bad');
+
+    const runs = acts.filter(a => a.type==='Run'||a.sport_type==='Run').map(a => {
+      const mi = (a.distance/1000)*0.621371;
+      const p = mi > 0 ? (a.moving_time/60)/mi : 0;
+      const dateStr = a.start_date_local.slice(0,10);
+      return {
+        date: dateStr,
+        day: getDayOfWeek(dateStr),
+        name: a.name,
+        mi: mi.toFixed(2),
+        pace: `${Math.floor(p)}:${Math.round((p%1)*60).toString().padStart(2,'0')}`,
+        hr: a.average_heartrate ? Math.round(a.average_heartrate) : null
+      };
+    }).sort((a,b) => b.date.localeCompare(a.date));
+
+    const totalMi = runs.reduce((s,r)=>s+parseFloat(r.mi),0).toFixed(1);
+    const cut = new Date(Date.now()-28*864e5).toISOString().slice(0,10);
+    const wkMi = runs.filter(r=>r.date>=cut).reduce((s,r)=>s+parseFloat(r.mi),0).toFixed(1);
+
+    document.getElementById('wk-stat').textContent = wkMi+' mi';
+    document.getElementById('strava-stat').textContent = '✓ Live';
+    document.getElementById('strava-stat').style.color = 'var(--teal)';
+    document.getElementById('hsub').textContent = `Live Strava · ${runs.length} runs · ${wkMi} mi last 4 weeks`;
+
+    stravaCtx = `\n\nLIVE STRAVA DATA (just fetched — ${new Date().toLocaleTimeString()}):\n`
+      + `Total runs on record: ${runs.length} | Last 4 weeks: ${wkMi} miles\n\n`
+      + `MOST RECENT 20 RUNS (with day of week):\n`
+      + runs.slice(0,20).map(r => `${r.day} ${r.date} | ${r.name} | ${r.mi}mi | ${r.pace}/mi${r.hr?' | HR:'+r.hr:''}`).join('\n');
+  } catch(e) {
+    document.getElementById('strava-btn').style.display = 'inline-block';
+  }
+}
+
+// ── CHAT ─────────────────────────────────────────────────────────
+function saveChat() { try { localStorage.setItem(CHAT_KEY, JSON.stringify(messages.slice(-80))); } catch(e){} }
+function loadChat() { try { const s=localStorage.getItem(CHAT_KEY); return s?JSON.parse(s):[]; } catch(e){ return []; } }
+
+function clearChat() {
+  messages = [];
+  localStorage.removeItem(CHAT_KEY);
+  document.getElementById('msgs').innerHTML = '';
+  document.getElementById('qbtns').style.display = 'flex';
+  addBubble('coach', "Chat cleared! What are we working on?");
+}
+
+// ── UI ───────────────────────────────────────────────────────────
+function addBubble(role, text) {
+  const c = document.getElementById('msgs');
+  const row = document.createElement('div');
+  row.className = 'row ' + role;
+  if (role === 'coach') {
+    const av = document.createElement('div');
+    av.className = 'av'; av.textContent = '🏃';
+    const bub = document.createElement('div');
+    bub.className = 'bubble'; bub.innerHTML = md(text);
+    row.appendChild(av); row.appendChild(bub);
+  } else {
+    const bub = document.createElement('div');
+    bub.className = 'bubble'; bub.textContent = text;
+    row.appendChild(bub);
+  }
+  c.appendChild(row);
+  c.scrollTop = c.scrollHeight;
+}
+
+function showTyping() {
+  const c = document.getElementById('msgs');
+  const row = document.createElement('div');
+  row.className = 'row coach'; row.id = 'typing';
+  const av = document.createElement('div');
+  av.className = 'av'; av.textContent = '🏃';
+  const bub = document.createElement('div');
+  bub.className = 'typing-bub';
+  bub.innerHTML = '<div class="d"></div><div class="d"></div><div class="d"></div>';
+  row.appendChild(av); row.appendChild(bub);
+  c.appendChild(row); c.scrollTop = c.scrollHeight;
+}
+function hideTyping() { const e=document.getElementById('typing'); if(e) e.remove(); }
+
+// ── CLAUDE API ───────────────────────────────────────────────────
+async function callClaude(userText) {
+  messages.push({role:'user', content: userText});
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-api-key': API_KEY,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-5',
+      max_tokens: 1500,
+      system: buildSystem() + stravaCtx,
+      messages: messages
+    })
+  });
+  if (!res.ok) {
+    messages.pop();
+    const e = await res.json().catch(()=>({}));
+    throw new Error(e?.error?.message || 'HTTP '+res.status);
+  }
+  const data = await res.json();
+  const reply = (data.content||[]).map(b=>b.text||'').join('');
+  messages.push({role:'assistant', content: reply});
+  saveChat();
+  return reply;
+}
+
+async function sendMsg() {
+  if (busy) return;
+  const inp = document.getElementById('inp');
+  const text = inp.value.trim();
+  if (!text) return;
+  inp.value = ''; inp.style.height = 'auto';
+  document.getElementById('qbtns').style.display = 'none';
+  document.getElementById('sbtn').disabled = true;
+  addBubble('user', text);
+  busy = true; showTyping();
+  try {
+    const reply = await callClaude(text);
+    hideTyping(); addBubble('coach', reply);
+  } catch(e) {
+    hideTyping();
+    addBubble('coach', 'Error: ' + e.message + '\n\nCheck your API key is enabled at console.anthropic.com');
+  }
+  busy = false;
+  document.getElementById('sbtn').disabled = false;
+}
+
+function quickSend(btn) { document.getElementById('inp').value = btn.textContent; sendMsg(); }
+function keydown(e) { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMsg();} }
+function autosize(el) { el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,120)+'px'; }
+
+// ── INIT ─────────────────────────────────────────────────────────
+function startCoach() {
+  const val = document.getElementById('key-inp').value.trim();
+  if (!val.startsWith('sk-')) { alert('Please enter a valid Anthropic API key (starts with sk-)'); return; }
+  API_KEY = val;
+  localStorage.setItem(API_KEY_STORE, API_KEY);
+  launchCoach();
+}
+
+function launchCoach() {
+  document.getElementById('setup').style.display = 'none';
+  document.getElementById('coach').classList.add('on');
+
+  messages = loadChat();
+
+  if (messages.length === 0) {
+    const today = getTodayFull();
+    const opening = `Hey Cameron! 👋 Your coach is live.\n\n**Today is ${today}.**\n\nI've got everything loaded — **1:49:09 half debut**, **21:29 5k PR**, **6:02 mile**, your full Strava history, your recent runs (3.08mi @ 10:14 this morning, 3.01mi @ 9:43 yesterday), and Mark's entire coaching philosophy.\n\nI know exactly where you are right now — just back from surf camp, body adapting back to running impact, IT band and calves improving from the soreness earlier this week. Your aerobic base is intact from all that surfing. We have a solid foundation.\n\nCurrent goal: feel comfortable and conversational at 8:20-8:45/mi pace. No race on the calendar — just building smart.\n\nHit **Connect Strava** top right for live run updates. What are we working on?`;
+    addBubble('coach', opening);
+    messages.push({role:'assistant', content: opening});
+    saveChat();
+  } else {
+    const c = document.getElementById('msgs');
+    c.innerHTML = '';
+    messages.forEach(m => addBubble(m.role==='user'?'user':'coach', m.content));
+    document.getElementById('qbtns').style.display = 'none';
+    const note = document.createElement('div');
+    note.style.cssText = 'text-align:center;font-size:11px;color:var(--muted);padding:6px 0;width:100%;';
+    note.textContent = '— resumed —';
+    c.appendChild(note);
+    c.scrollTop = c.scrollHeight;
+  }
+
+  loadStrava();
+}
+
+async function init() {
+  const params = new URLSearchParams(location.search);
+  const code = params.get('code');
+  if (code) {
+    history.replaceState({}, '', location.pathname);
+    try {
+      const r = await fetch('https://www.strava.com/oauth/token', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({client_id:STRAVA_CLIENT_ID, client_secret:STRAVA_CLIENT_SECRET, code, grant_type:'authorization_code'})
+      });
+      const d = await r.json();
+      if (d.access_token) saveTokens(d);
+    } catch(e) { console.warn('Strava auth error:', e); }
+  }
+
+  const saved = localStorage.getItem(API_KEY_STORE);
+  if (saved && saved.startsWith('sk-')) {
+    API_KEY = saved;
+    launchCoach();
+  }
+}
+
+init();
+</script>
+</body>
+</html>
